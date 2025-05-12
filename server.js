@@ -13,6 +13,7 @@ const authRoutes = require('./src/routes/auth');
 const reservationsRoutes = require('./src/routes/reservationsRoutes');
 const menuRoutes = require('./src/routes/menuRoutes');
 const tableRoutes = require('./src/routes/tableRoutes');
+const availabilityRoutes = require('./src/routes/availabilityRoutes');
 // const userRoutes = require('./src/routes/userRoute');
 
 app.use(cors());
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationsRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/tables', tableRoutes);
+app.use('/api/availability', availabilityRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
