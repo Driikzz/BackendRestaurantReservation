@@ -1,13 +1,24 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const db = require('./src/config/database');
+
+const sequelize = require('./src/config/database'); 
 
 const app = express();
+
+// Routes
+const authRoutes = require('./src/routes/auth');
+const reservationsRoutes = require('./src/routes/reservationsRoutes');
+// const userRoutes = require('./src/routes/userRoute'); 
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Routes API
+// app.use('/api/users', userRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/reservations', reservationsRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
@@ -17,13 +28,16 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({
-        message: 'Une erreur est survenue !',
+        message: 'Erreur serveur',
         error: process.env.NODE_ENV === 'development' ? err : {}
     });
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-    console.log(`Serveur démarré sur le port ${PORT}`);
+sequelize.sync({ alter: true }).then(() => {
+    console.log('Base de données synchronisée.');
+    app.listen(PORT, () => console.log(`Serveur lancé sur le port ${PORT}`));
+}).catch((err) => {
+    console.error('Erreur de connexion à la base de données :', err);
 });
