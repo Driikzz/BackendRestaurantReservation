@@ -10,6 +10,7 @@ const app = express();
 const authRoutes = require('./src/routes/auth');
 const reservationsRoutes = require('./src/routes/reservationsRoutes');
 const menuRoutes = require('./src/routes/menuRoutes');
+const tableRoutes = require('./src/routes/tableRoutes');
 // const userRoutes = require('./src/routes/userRoute');
 
 app.use(cors());
@@ -21,6 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationsRoutes);
 app.use('/api/menu', menuRoutes);
+app.use('/api/tables', tableRoutes);
 
 // Route de test
 app.get('/', (req, res) => {

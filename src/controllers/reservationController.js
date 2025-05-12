@@ -2,6 +2,7 @@ const Reservation = require('../models/Reservation');
 const Table = require('../models/Table');
 const ReservationTable = require('../models/ReservationTable');
 const User = require('../models/User');
+const { Op } = require('sequelize');
 
 // GET /reservations - Admin only
 exports.getAllReservations = async (req, res) => {
@@ -23,21 +24,22 @@ exports.getMyReservations = async (req, res) => {
 exports.createReservation = async (req, res) => {
   const { number_of_people, date, time, note } = req.body;
   try {
-    const tables = await Table.findAll();
+    // Vérifier la disponibilité des tables pour ce créneau
+    const availableTables = await getAvailableTables(date, time);
 
-    // Génère toutes les combinaisons possibles
-    let combos = [[]];
-    for (const table of tables) {
-      const newCombos = combos.map(c => [...c, table]).filter(c =>
-        c.reduce((sum, t) => sum + t.seats, 0) <= number_of_people + 2
-      );
-      combos = combos.concat(newCombos);
+    if (availableTables.length === 0) {
+      return res.status(400).json({ message: 'Pas de tables disponibles pour ce créneau' });
     }
-    const valid = combos.find(c =>
-      c.reduce((sum, t) => sum + t.seats, 0) >= number_of_people
-    );
 
-    if (!valid) return res.status(400).json({ message: 'Pas de tables disponibles' });
+    // Trouver une combinaison de tables qui peut accueillir le nombre de personnes
+    const tableAssignment = findTableCombination(availableTables, number_of_people);
+
+    if (!tableAssignment) {
+      return res.status(400).json({
+        message: 'Pas assez de places disponibles pour ce nombre de personnes',
+        availableTables
+      });
+    }
 
     const reservation = await Reservation.create({
       user_id: req.user.userId,
@@ -47,11 +49,15 @@ exports.createReservation = async (req, res) => {
       note
     });
 
-    for (let table of valid) {
+    for (let table of tableAssignment) {
       await reservation.addTable(table);
     }
 
-    res.status(201).json({ message: 'Réservation enregistrée', reservation });
+    res.status(201).json({
+      message: 'Réservation enregistrée',
+      reservation,
+      tables: tableAssignment
+    });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
@@ -89,3 +95,66 @@ exports.validateReservation = async (req, res) => {
 
   res.json({ message: 'Réservation confirmée', reservation });
 };
+
+// Fonction utilitaire pour trouver une combinaison de tables
+function findTableCombination(tables, numberOfPeople) {
+  // Génère toutes les combinaisons possibles
+  let combos = [[]];
+  for (const table of tables) {
+    const newCombos = combos.map(c => [...c, table]).filter(c =>
+      c.reduce((sum, t) => sum + t.seats, 0) <= numberOfPeople + 2
+    );
+    combos = combos.concat(newCombos);
+  }
+
+  // Trouve la première combinaison valide
+  const valid = combos.find(c =>
+    c.reduce((sum, t) => sum + t.seats, 0) >= numberOfPeople
+  );
+
+  return valid || null;
+}
+
+// Fonction utilitaire pour obtenir les tables disponibles
+async function getAvailableTables(date, time) {
+  // Récupérer toutes les tables
+  const allTables = await Table.findAll();
+
+  // Récupérer les tables déjà réservées pour ce créneau
+  const reservedTableIds = await getReservedTableIds(date, time);
+
+  // Filtrer les tables disponibles
+  return allTables.filter(table => !reservedTableIds.includes(table.id));
+}
+
+// Fonction utilitaire pour obtenir les IDs des tables réservées
+async function getReservedTableIds(date, time) {
+  // Créer une plage horaire de +/- 2 heures autour de l'heure demandée
+  const timeObj = new Date(`2000-01-01T${time}`);
+  const twoHoursBefore = new Date(timeObj.getTime() - 2 * 60 * 60 * 1000).toTimeString().slice(0, 8);
+  const twoHoursAfter = new Date(timeObj.getTime() + 2 * 60 * 60 * 1000).toTimeString().slice(0, 8);
+
+  // Trouver les réservations qui se chevauchent avec ce créneau
+  const overlappingReservations = await Reservation.findAll({
+    where: {
+      date: date,
+      time: {
+        [Op.between]: [twoHoursBefore, twoHoursAfter]
+      },
+      status: {
+        [Op.ne]: 'cancelled'
+      }
+    },
+    include: [Table]
+  });
+
+  // Extraire les IDs des tables
+  const reservedTableIds = [];
+  overlappingReservations.forEach(reservation => {
+    reservation.Tables.forEach(table => {
+      reservedTableIds.push(table.id);
+    });
+  });
+
+  return reservedTableIds;
+}
