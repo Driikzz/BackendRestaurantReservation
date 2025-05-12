@@ -560,7 +560,7 @@ Réponse (201 Created):
 }
 ```
 
-#### Créer ou mettre à jour une date exceptionnelle (admin)
+#### Créer ou mettre à jour une date exceptionnelle (admin) // FTR
 
 ```
 POST /api/availability/admin/exceptional-dates
