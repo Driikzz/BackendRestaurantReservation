@@ -2,14 +2,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const sequelize = require('./src/config/database'); 
+const sequelize = require('./src/config/database');
 
 const app = express();
 
 // Routes
 const authRoutes = require('./src/routes/auth');
 const reservationsRoutes = require('./src/routes/reservationsRoutes');
-// const userRoutes = require('./src/routes/userRoute'); 
+const menuRoutes = require('./src/routes/menuRoutes');
+// const userRoutes = require('./src/routes/userRoute');
 
 app.use(cors());
 app.use(express.json());
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/reservations', reservationsRoutes);
+app.use('/api/menu', menuRoutes);
 
 // Route de test
 app.get('/', (req, res) => {
