@@ -20,15 +20,19 @@ exports.createTable = async (req, res) => {
     return res.status(403).json({ message: 'Accès refusé' });
   }
 
-  const { seats } = req.body;
+  const { seats, name, location } = req.body;
   
   // Vérifier que le nombre de places est valide (2, 4 ou 6)
   if (![2, 4, 6].includes(seats)) {
     return res.status(400).json({ message: 'Le nombre de places doit être 2, 4 ou 6' });
   }
 
+  if (!name) {
+    return res.status(400).json({ message: 'Le nom de la table est requis' });
+  }
+
   try {
-    const table = await Table.create({ seats });
+    const table = await Table.create({ seats, name, location });
     res.status(201).json({ message: 'Table créée', table });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
@@ -42,11 +46,15 @@ exports.updateTable = async (req, res) => {
   }
 
   const id = req.params.id;
-  const { seats } = req.body;
+  const { seats, name, location } = req.body;
 
   // Vérifier que le nombre de places est valide (2, 4 ou 6)
   if (![2, 4, 6].includes(seats)) {
     return res.status(400).json({ message: 'Le nombre de places doit être 2, 4 ou 6' });
+  }
+
+  if (!name) {
+    return res.status(400).json({ message: 'Le nom de la table est requis' });
   }
 
   try {
@@ -55,7 +63,7 @@ exports.updateTable = async (req, res) => {
       return res.status(404).json({ message: 'Table introuvable' });
     }
 
-    await table.update({ seats });
+    await table.update({ seats, name, location });
     res.json({ message: 'Table modifiée', table });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', error: err.message });

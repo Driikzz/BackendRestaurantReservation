@@ -3,6 +3,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const sequelize = require('./src/config/database');
+// Importer les modèles avec leurs associations
+require('./src/models/index');
 
 const app = express();
 
@@ -39,7 +41,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-sequelize.sync({ alter: true }).then(() => {
+// Force la recréation des tables
+sequelize.sync({ force: true }).then(() => {
     console.log('Base de données synchronisée.');
     app.listen(PORT, () => console.log(`Serveur lancé sur le port ${PORT}`));
 }).catch((err) => {
