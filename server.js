@@ -43,9 +43,9 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Force la recréation des tables
-sequelize.sync({ force: true }).then(() => {
-    console.log('Base de données synchronisée.');
+// CHANGEMENT ICI : alter au lieu de force pour ne pas perdre les données
+sequelize.sync({ alter: true }).then(() => {
+    console.log('Base de données synchronisée (données conservées).');
     app.listen(PORT, () => console.log(`Serveur lancé sur le port ${PORT}`));
 }).catch((err) => {
     console.error('Erreur de connexion à la base de données :', err);

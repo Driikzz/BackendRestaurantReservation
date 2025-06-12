@@ -7,11 +7,32 @@ const ExceptionalDate = require('../models/ExceptionalDate');
 const ExceptionalSlot = require('../models/ExceptionalSlot');
 const { Op } = require('sequelize');
 
-// GET /reservations - Admin only
+// GET /reservations - Admin only avec filtres
 exports.getAllReservations = async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'Accès refusé' });
-  const reservations = await Reservation.findAll({ include: [User, Table] });
-  res.json(reservations);
+  
+  try {
+    const { date, status } = req.query;
+    const whereClause = {};
+    
+    if (date) {
+      whereClause.date = date;
+    }
+    
+    if (status) {
+      whereClause.status = status;
+    }
+    
+    const reservations = await Reservation.findAll({ 
+      where: whereClause,
+      include: [User, Table],
+      order: [['date', 'DESC'], ['time', 'DESC']]
+    });
+    
+    res.json(reservations);
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur serveur', error: err.message });
+  }
 };
 
 // GET /my-reservations - Client

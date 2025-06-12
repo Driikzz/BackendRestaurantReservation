@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: '1d'
     });
-    res.json({ token });
+    res.json({ message: 'Connexion réussie', token, userId: user.id, role: user.role });
   } catch (err) {
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
