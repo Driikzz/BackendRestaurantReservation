@@ -10,7 +10,6 @@ exports.getAvailabilityByDate = async (req, res) => {
       return res.status(400).json({ message: 'Date requise' });
     }
 
-    console.log('🔍 Recherche créneaux pour la date:', date);
 
     // Vérifier si le restaurant est fermé exceptionnellement
     const exceptionalClosure = await ExceptionalDate.findOne({
@@ -21,7 +20,6 @@ exports.getAvailabilityByDate = async (req, res) => {
     });
 
     if (exceptionalClosure) {
-      console.log('❌ Restaurant fermé exceptionnellement');
       return res.json({
         date,
         is_closed: true,
@@ -34,8 +32,8 @@ exports.getAvailabilityByDate = async (req, res) => {
     const dateObj = new Date(date + 'T12:00:00'); // Ajouter time pour éviter les problèmes de timezone
     const dayOfWeek = dateObj.getDay(); // 0 = dimanche, 1 = lundi, etc.
     
-    console.log('📅 Date parsée:', dateObj);
-    console.log('📅 Jour de la semaine:', dayOfWeek);
+    console.log('Date parsée:', dateObj);
+    console.log('Jour de la semaine:', dayOfWeek);
 
     // Vérifier s'il y a des créneaux exceptionnels pour cette date
     const exceptionalDate = await ExceptionalDate.findOne({
@@ -50,15 +48,13 @@ exports.getAvailabilityByDate = async (req, res) => {
 
     // Si date exceptionnelle avec créneaux, utiliser UNIQUEMENT ceux-ci
     if (exceptionalDate && exceptionalDate.ExceptionalSlots?.length > 0) {
-      console.log('🎯 Utilisation des créneaux exceptionnels:', exceptionalDate.ExceptionalSlots.length);
+      console.log('Utilisation des créneaux exceptionnels:', exceptionalDate.ExceptionalSlots.length);
       allSlots = exceptionalDate.ExceptionalSlots.map(slot => ({
         time: slot.time,
         duration: slot.duration,
         is_exceptional: true
       }));
     } else {
-      // Sinon, récupérer les créneaux standards pour ce jour de la semaine
-      console.log('📋 Recherche créneaux standards pour le jour:', dayOfWeek);
       
       const regularSlots = await OpeningSlot.findAll({
         where: {
@@ -67,8 +63,6 @@ exports.getAvailabilityByDate = async (req, res) => {
         },
         order: [['time', 'ASC']]
       });
-
-      console.log('📋 Créneaux standards trouvés:', regularSlots.length);
       regularSlots.forEach(slot => {
         console.log(`  - ${slot.time} (jour ${slot.day_of_week})`);
       });
@@ -82,13 +76,10 @@ exports.getAvailabilityByDate = async (req, res) => {
 
     // Trier par heure
     allSlots.sort((a, b) => a.time.localeCompare(b.time));
-
-    console.log('⏰ Tous les créneaux avant vérification:', allSlots.length);
-
     // Pour simplifier le debug, retourner tous les créneaux comme disponibles pour l'instant
     const availableSlots = allSlots.map(slot => slot.time);
 
-    console.log('✅ Créneaux disponibles finaux:', availableSlots);
+    console.log('Créneaux disponibles finaux:', availableSlots);
 
     res.json({
       date,
@@ -100,7 +91,7 @@ exports.getAvailabilityByDate = async (req, res) => {
     });
     
   } catch (err) {
-    console.error('❌ Erreur dans getAvailabilityByDate:', err);
+    console.error('Erreur dans getAvailabilityByDate:', err);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
@@ -116,10 +107,10 @@ exports.getAvailableDates = async (req, res) => {
       where: { is_active: true }
     });
     
-    console.log('📋 Créneaux standards actifs:', openingSlots.length);
+    console.log('Créneaux standards actifs:', openingSlots.length);
     
     const activeDays = new Set(openingSlots.map(slot => slot.day_of_week));
-    console.log('📅 Jours actifs:', Array.from(activeDays));
+    console.log(' Jours actifs:', Array.from(activeDays));
 
     // Obtenir toutes les dates exceptionnelles
     const exceptionalDates = await ExceptionalDate.findAll({
@@ -131,8 +122,6 @@ exports.getAvailableDates = async (req, res) => {
       exceptionalMap[ed.date] = ed;
     });
 
-    console.log('🎯 Dates exceptionnelles:', Object.keys(exceptionalMap));
-
     // Générer les 30 prochains jours
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
@@ -142,13 +131,11 @@ exports.getAvailableDates = async (req, res) => {
 
       // Vérifier si c'est une date de fermeture exceptionnelle
       if (exceptionalMap[dateStr]?.is_closed) {
-        console.log(`❌ ${dateStr} - Fermé exceptionnellement`);
         continue;
       }
 
       // Si date exceptionnelle avec créneaux
       if (exceptionalMap[dateStr] && exceptionalMap[dateStr].ExceptionalSlots?.length > 0) {
-        console.log(`🎯 ${dateStr} - Date exceptionnelle avec ${exceptionalMap[dateStr].ExceptionalSlots.length} créneaux`);
         availableDates.push({
           date: dateStr,
           type: 'exceptional',
@@ -160,18 +147,18 @@ exports.getAvailableDates = async (req, res) => {
       // Si jour standard ouvert
       if (activeDays.has(dayOfWeek)) {
         const slotsForDay = openingSlots.filter(slot => slot.day_of_week === dayOfWeek);
-        console.log(`📅 ${dateStr} (jour ${dayOfWeek}) - ${slotsForDay.length} créneaux standards`);
+        console.log(`${dateStr} (jour ${dayOfWeek}) - ${slotsForDay.length} créneaux standards`);
         availableDates.push({
           date: dateStr,
           type: 'regular',
           slots_count: slotsForDay.length
         });
       } else {
-        console.log(`❌ ${dateStr} (jour ${dayOfWeek}) - Aucun créneau standard`);
+        console.log(`${dateStr} (jour ${dayOfWeek}) - Aucun créneau standard`);
       }
     }
 
-    console.log('✅ Total dates disponibles:', availableDates.length);
+    console.log('Total dates disponibles:', availableDates.length);
 
     res.json({
       available_dates: availableDates,
@@ -179,7 +166,7 @@ exports.getAvailableDates = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Erreur dans getAvailableDates:', err);
+    console.error('Erreur dans getAvailableDates:', err);
     res.status(500).json({ message: 'Erreur serveur', error: err.message });
   }
 };
